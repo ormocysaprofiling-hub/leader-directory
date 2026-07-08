@@ -8,209 +8,102 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-:root{
-  --cream:#F7F3EA;
-  --cream-deep:#EDE4D0;
-  --ink:#221E18;
-  --ink-soft:#59543F;
-  --teal:#1F4B46;
-  --teal-soft:#2C6560;
-  --terracotta:#B7552F;
-  --gold:#AD8329;
-  --line:#E3DACB;
+:root{\n  --cream:#F7F3EA;\n  --cream-deep:#EDE4D0;\n  --ink:#221E18;\n  --ink-soft:#59543F;\n  --teal:#1F4B46;\n  --teal-soft:#2C6560;\n  --terracotta:#B7552F;\n  --gold:#AD8329;\n  --line:#E3DACB;\n}
+.font-serif-theme{font-family:'Fraunces',Georgia,serif;}\n.font-sans-theme{font-family:'Inter',system-ui,sans-serif;}\nbody{background:var(--cream);color:var(--ink);}\n\n/* ---- signature seal motif ---- */\n.seal-rings{position:absolute;pointer-events:none;}\n
+@keyframes ambientFloat {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.05); }
+    66% { transform: translate(-20px, 20px) scale(0.98); }
+    100% { transform: translate(0px, 0px) scale(1); }
 }
-.font-serif-theme{font-family:'Fraunces',Georgia,serif;}
-.font-sans-theme{font-family:'Inter',system-ui,sans-serif;}
-body{background:var(--cream);color:var(--ink);}
-
-/* ---- signature seal motif ---- */
-.seal-rings{position:absolute;pointer-events:none;}
-.seal-rings circle{fill:none;stroke-width:1.4;}
-
-/* ---- login screen ---- */
-#login-screen{min-height:100dvh;}
-.seal-lock{
-  width:64px;height:64px;border-radius:9999px;
-  background:var(--teal);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 12px 30px -8px rgba(31,75,70,.55);
-  transition:transform .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s;
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-#login-screen.unlocking .seal-lock{transform:rotate(-8deg) scale(1.06);}
-.login-card{
-  background:var(--cream-deep);
-  border:1px solid var(--line);
-  box-shadow:0 30px 60px -25px rgba(34,30,24,.35);
-}
-.field-input{
-  background:var(--cream);
-  border:1px solid var(--line);
-}
-.field-input:focus{outline:none;border-color:var(--teal-soft);box-shadow:0 0 0 3px rgba(44,101,96,.15);}
-.btn-primary{
-  background:var(--teal);color:#fff;
-  transition:background .2s, transform .15s;
-}
-.btn-primary:hover{background:var(--teal-soft);}
-.btn-primary:active{transform:scale(.98);}
-.shake{animation:shake .4s;}
-@keyframes shake{
-  10%,90%{transform:translateX(-1px);}
-  20%,80%{transform:translateX(2px);}
-  30%,50%,70%{transform:translateX(-4px);}
-  40%,60%{transform:translateX(4px);}
-}
-
-/* ---- app shell ---- */
-#app-shell{display:none;}
-.nav-pill{transition:all .18s;}
-.leader-card{
-  background:var(--cream-deep);
-  border:1px solid var(--line);
-  transition:transform .25s, box-shadow .25s, border-color .25s;
-}
-.leader-card:hover{
-  transform:translateY(-3px);
-  box-shadow:0 20px 40px -22px rgba(34,30,24,.4);
-  border-color:#d8ccb2;
-}
-.avatar-ring{
-  border:2px solid var(--cream);
-  outline:2px solid var(--line);
-}
-.dept-seal{
-  width:26px;height:26px;border-radius:9999px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:9px;font-weight:800;letter-spacing:.02em;color:#fff;
-  flex-shrink:0;
-}
-::selection{background:var(--gold);color:#fff;}
+.animate-ambient { animation: ambientFloat 16s infinite ease-in-out; }
+.animate-ambient-delayed { animation: ambientFloat 20s infinite ease-in-out; animation-delay: 3s; }
+.directory-card-animated { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 </style>
 </head>
-<body class="font-sans-theme antialiased">
+<body class="font-sans-theme min-h-screen flex flex-col justify-between relative overflow-x-hidden">
 
-<!-- ============================================================ -->
-<!-- LOGIN GATE                                                    -->
-<!-- ============================================================ -->
-<div id="login-screen" class="relative flex items-center justify-center px-6 overflow-hidden">
-  <svg class="seal-rings opacity-[.18] -top-24 -left-24 w-[340px] h-[340px]" viewBox="0 0 200 200">
-    <circle cx="100" cy="100" r="40" stroke="#B7552F"/><circle cx="100" cy="100" r="70" stroke="#B7552F"/><circle cx="100" cy="100" r="98" stroke="#B7552F"/>
-  </svg>
-  <svg class="seal-rings opacity-[.18] -bottom-28 -right-28 w-[380px] h-[380px]" viewBox="0 0 200 200">
-    <circle cx="100" cy="100" r="40" stroke="#1F4B46"/><circle cx="100" cy="100" r="70" stroke="#1F4B46"/><circle cx="100" cy="100" r="98" stroke="#1F4B46"/>
-  </svg>
-
-  <div class="login-card relative z-10 w-full max-w-[400px] rounded-2xl p-8 sm:p-10">
-    <div class="flex flex-col items-center text-center mb-7">
-      <div class="seal-lock mb-5">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-      </div>
-      <div class="text-[11px] font-bold tracking-[0.16em] uppercase text-[#B7552F]">Restricted Access</div>
-      <h1 class="font-serif-theme text-3xl italic font-semibold mt-2">Leaders Directory</h1>
-      <p class="text-sm text-[color:var(--ink-soft)] mt-2 leading-relaxed">
-        This directory is reserved for stake ysa leaders and assigned committee. Sign in with your leader credentials to continue.
-      </p>
-    </div>
-
-    <form id="login-form" class="space-y-3.5">
-      <div>
-        <label class="block text-xs font-semibold text-[color:var(--ink-soft)] mb-1.5" for="login-name">Full name</label>
-        <input id="login-name" type="text" autocomplete="name" required placeholder="e.g. Maria Santos"
-               class="field-input w-full px-3.5 py-2.5 rounded-lg text-sm">
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-[color:var(--ink-soft)] mb-1.5" for="login-pass">Access code</label>
-        <input id="login-pass" type="password" autocomplete="current-password" required placeholder="••••••••"
-               class="field-input w-full px-3.5 py-2.5 rounded-lg text-sm">
-      </div>
-
-      <div id="login-error" class="hidden text-xs font-medium text-[#B7552F] bg-[#B7552F]/10 border border-[#B7552F]/25 rounded-lg px-3 py-2"></div>
-
-      <button type="submit" class="btn-primary w-full py-2.5 rounded-lg text-sm font-semibold mt-1.5 cursor-pointer">
-        Enter Registry
-      </button>
-
-      <label class="flex items-center gap-2 justify-center text-[11px] text-[color:var(--ink-soft)] pt-1 cursor-pointer">
-        <input type="checkbox" id="remember-me" class="accent-[#1F4B46]">
-        Keep me signed in on this device
-      </label>
-    </form>
-
-    <p class="text-center text-[11px] text-[color:var(--ink-soft)] mt-6 pt-5 border-t border-[color:var(--line)]">
-      Access code not working? <a href="mailto:ormocysaprofiling@gmail.com" class="font-semibold text-[#1F4B46] hover:underline">Contact the stake office</a>
-    </p>
+  <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-[#B7552F]/6 blur-[100px] animate-ambient"></div>
+    <div class="absolute top-[35%] right-[-10%] w-[450px] h-[450px] rounded-full bg-[#1F4B46]/5 blur-[120px] animate-ambient-delayed"></div>
   </div>
-</div>
 
-<!-- ============================================================ -->
-<!-- MAIN APP (hidden until authenticated)                         -->
-<!-- ============================================================ -->
-<div id="app-shell" class="min-h-screen flex flex-col justify-between">
-
-  <header class="relative overflow-hidden border-b border-[color:var(--line)] bg-gradient-to-b from-[color:var(--cream)] to-[color:var(--cream-deep)]">
-    <svg class="seal-rings opacity-25 -top-20 -left-20 w-[220px] h-[220px]" viewBox="0 0 200 200"><circle cx="100" cy="100" r="40" stroke="#B7552F"/><circle cx="100" cy="100" r="70" stroke="#B7552F"/><circle cx="100" cy="100" r="98" stroke="#B7552F"/></svg>
-
-    <div class="max-w-[1100px] mx-auto px-6 pt-8 pb-2 flex items-center justify-between relative z-10">
-      <div class="flex items-center gap-2 text-[11px] font-semibold text-[color:var(--ink-soft)]">
-        <span class="w-2 h-2 rounded-full bg-[#1F4B46]"></span>
-        <span id="welcome-line">Signed in</span>
-      </div>
-      <button id="logout-btn" class="text-[11px] font-semibold text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors cursor-pointer flex items-center gap-1">
-        Sign out
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-      </button>
+  <div id="auth-gate" class="fixed inset-0 bg-[#F7F3EA] z-50 flex items-center justify-center px-4">
+    <div class="bg-[#EDE4D0] p-8 rounded-2xl border border-[#E3DACB] max-w-sm w-full text-center shadow-xl">
+      <div class="w-12 h-12 rounded-full border border-[#B7552F] flex items-center justify-center mx-auto mb-4 font-serif-theme italic text-xl font-bold text-[#B7552F]">✦</div>
+      <h2 class="font-serif-theme text-2xl font-bold italic text-[#221E18]">Access Verification</h2>
+      <p class="text-xs text-[#59543F] mt-1.5 mb-6">Please enter the Ormoc Stake YSA shared credential key code phrase to open the directory registry matrix node.</p>
+      <form id="login-form" class="space-y-3">
+        <input type="password" id="passkey-input" placeholder="Enter Access Code Key..." class="w-full text-center px-4 py-2.5 bg-[#F7F3EA] border border-[#E3DACB] rounded-lg text-sm text-[#221E18] outline-hidden focus:ring-2 focus:ring-[#1F4B46]/50">
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-[#1F4B46] hover:bg-[#1A3F3B] text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-xs cursor-pointer">Verify Credentials</button>
+      </form>
+      <p id="login-error" class="text-red-700 text-xs mt-3 hidden font-medium">Invalid shared access passkey node. Try again.</p>
     </div>
+  </div>
 
-    <div class="text-center pt-6 pb-14 px-6 relative z-10">
-      <div class="text-xs font-bold tracking-[0.14em] uppercase text-[#B7552F]">Councils &amp; Committees</div>
-      <h1 class="font-serif-theme text-4xl md:text-5xl font-semibold italic mt-3 mb-3">Leaders Liahona</h1>
-      <p class="max-w-[520px] mx-auto text-sm md:text-base text-[color:var(--ink-soft)] leading-relaxed">
-        Connecting our community organizers, directors, and leaders gathering together in fellowship and service.
-      </p>
-    </div>
+  <header class="relative overflow-hidden text-center pt-20 pb-14 px-6 border-b border-[color:var(--line)] z-10">
+    <svg class="seal-rings opacity-30 top-[-60px] left-[-60px] w-[220px] h-[220px]" viewBox="0 0 200 200"><circle cx="100" cy="100" r="40" fill="none" stroke="var(--terracotta)" stroke-width="1.5"/><circle cx="100" cy="100" r="70" fill="none" stroke="var(--terracotta)" stroke-width="1.5"/><circle cx="100" cy="100" r="98" fill="none" stroke="var(--terracotta)" stroke-width="1.5"/></svg>
+    <svg class="seal-rings opacity-30 bottom-[-80px] right-[-80px] w-[280px] h-[280px]" viewBox="0 0 200 200"><circle cx="100" cy="100" r="40" fill="none" stroke="var(--teal)" stroke-width="1.5"/><circle cx="100" cy="100" r="70" fill="none" stroke="var(--teal)" stroke-width="1.5"/><circle cx="100" cy="100" r="98" fill="none" stroke="var(--teal)" stroke-width="1.5"/></svg>
+
+    <div class="text-xs font-bold tracking-[0.14em] uppercase text-[color:var(--terracotta)]">Councils & Committees</div>
+    <h1 class="font-serif-theme text-4xl md:text-5xl font-semibold italic text-[color:var(--ink)] mt-3 mb-3">Leadership Registry</h1>
+    <p class="max-w-[520px] mx-auto text-sm text-[color:var(--ink-soft)] leading-relaxed">Connecting our community organizers, directors, and leaders gathering together in fellowship and service.</p>
+    <button id="logout-btn" class="absolute top-6 right-6 px-3 py-1.5 rounded-md bg-[color:var(--cream-deep)] border border-[color:var(--line)] text-[10px] font-bold uppercase tracking-wider hover:bg-white text-[color:var(--ink)] transition-colors cursor-pointer shadow-2xs">Revoke Key ✕</button>
   </header>
 
-  <main class="max-w-[1100px] mx-auto w-full px-6 pb-24 flex-1 -mt-6 relative z-10">
+  <main class="max-w-[1000px] mx-auto w-full px-6 pb-24 flex-1 relative z-10 mt-12 space-y-14">
+    
+    <section>
+      <h2 class="font-serif-theme text-2xl font-bold italic text-[color:var(--teal)] border-b border-[color:var(--line)] pb-2 mb-6 flex items-center gap-2">✦ Featured Committees</h2>
+      <div id="committee-grid" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          </div>
+    </section>
 
-    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-10 bg-[color:var(--cream-deep)] p-4 rounded-xl border border-[color:var(--line)] shadow-sm">
-      <div class="relative w-full md:flex-1">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input type="text" id="search-input" placeholder="Search leaders by name, role, or keyword..."
-               class="field-input w-full pl-10 pr-4 py-2.5 rounded-lg text-sm placeholder-[color:var(--ink-soft)]">
+    <section>
+      <div class="border-b border-[color:var(--line)] pb-3 mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h2 class="font-serif-theme text-2xl font-bold italic text-[color:var(--ink)]">All YSA Directory Profiles</h2>
+          <p class="text-xs text-[color:var(--ink-soft)]">Browse and sort members throughout every ward across the stake matrix.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="filter-ward" onchange="handleSearchAndFilter()" class="bg-[color:var(--cream-deep)] border border-[color:var(--line)] text-xs font-semibold px-3 py-2.5 rounded-lg outline-hidden focus:ring-2 focus:ring-[color:var(--teal)] text-[color:var(--ink)]">
+            <option value="All">All Wards</option>
+            <option value="Ormoc 1st">Ormoc 1st Ward</option>
+            <option value="Ormoc 2nd">Ormoc 2nd Ward</option>
+            <option value="Ormoc 3rd">Ormoc 3rd Ward</option>
+            <option value="Albuera">Albuera Ward</option>
+            <option value="Kananga">Kananga Ward</option>
+          </select>
+
+          <input type="text" id="search-input" placeholder="Search profiles..." 
+                 class="px-3 py-2 bg-white border border-[color:var(--line)] rounded-lg text-xs text-[color:var(--ink)] outline-hidden focus:ring-2 focus:ring-[color:var(--teal)] placeholder-[color:var(--ink-soft)] w-44">
+        </div>
       </div>
-      <div class="flex flex-wrap gap-1.5 w-full md:w-auto" id="filter-container">
-        <button onclick="filterDepartment('All')" class="dept-btn active nav-pill px-4 py-2 text-xs font-semibold rounded-md bg-[#1F4B46] text-white cursor-pointer">All Roles</button>
-        <button onclick="filterDepartment('Leadership')" class="dept-btn nav-pill px-4 py-2 text-xs font-semibold rounded-md text-[color:var(--ink)] bg-[color:var(--cream)] hover:bg-white cursor-pointer">Leadership</button>
-        <button onclick="filterDepartment('Ministering')" class="dept-btn nav-pill px-4 py-2 text-xs font-semibold rounded-md text-[color:var(--ink)] bg-[color:var(--cream)] hover:bg-white cursor-pointer">Ministering</button>
-        <button onclick="filterDepartment('Spiritual')" class="dept-btn nav-pill px-4 py-2 text-xs font-semibold rounded-md text-[color:var(--ink)] bg-[color:var(--cream)] hover:bg-white cursor-pointer">Spiritual</button>
+
+      <div id="ysa-profiles-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+      <div id="no-results" class="hidden text-center py-16 bg-[color:var(--cream-deep)]/40 rounded-xl border border-dashed border-[color:var(--line)]">
+        <h3 class="font-serif-theme text-xl font-semibold text-[#1F4B46]">No Profiles Found</h3>
+        <p class="text-[color:var(--ink-soft)] text-sm mt-1">Refine your search or change the selected category.</p>
       </div>
-    </div>
-
-    <div id="result-count" class="text-xs font-semibold text-[color:var(--ink-soft)] mb-4 tracking-wide"></div>
-
-    <div id="directory-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-
-    <div id="no-results" class="hidden text-center py-16 bg-[color:var(--cream-deep)]/40 rounded-xl border border-dashed border-[color:var(--line)]">
-      <h3 class="font-serif-theme text-xl font-semibold text-[#1F4B46]">No Profiles Found</h3>
-      <p class="text-[color:var(--ink-soft)] text-sm mt-1">Refine your search or change the selected category.</p>
-    </div>
+    </section>
   </main>
 
   <footer class="bg-[#171310] text-[#B8B0A0] px-6 py-12 text-center border-t-[3px] border-[#B7552F]">
     <h3 class="font-serif-theme font-semibold text-xl text-white mb-2">Ormoc Philippine Stake YSA</h3>
-    <p class="text-xs md:text-sm text-[#B8B0A0] max-w-[600px] mx-auto mb-5 leading-relaxed">
-      The Church of Jesus Christ of Latter-day Saints · D. Veloso Avenue, Brgy. Dona Felisa Mejia Subd., Ormoc City, Leyte 6541
-    </p>
+    <p class="text-xs md:text-sm text-[#B8B0A0] max-w-[600px] mx-auto mb-5 leading-relaxed">The Church of Jesus Christ of Latter-day Saints · D. Veloso Avenue, Brgy. Dona Felisa Mejia Subd., Ormoc City, Leyte 6541</p>
     <div class="flex gap-6 justify-center flex-wrap mb-6 text-sm">
       <a href="mailto:ormocysaprofiling@gmail.com" class="text-[#AD8329] font-semibold hover:text-white hover:underline transition-all">Email Us</a>
       <a href="https://www.facebook.com/share/17pZhJ5h9u/" target="_blank" rel="noopener" class="text-[#AD8329] font-semibold hover:text-white hover:underline transition-all">Facebook</a>
     </div>
-    <div class="text-[11px] text-[#736C5D] border-t border-[#2B2620] pt-4 mt-4">
-      This directory is private to stake leadership · Not for public distribution
-    </div>
+    <div class="text-[11px] text-[#767066] border-t border-[#262420] pt-4 mt-4">© 2026 Ormoc Stake Young Single Adults. Built with love, for every soul gathered home.</div>
   </footer>
-</div>
 
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
