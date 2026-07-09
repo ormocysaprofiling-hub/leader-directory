@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Sister Maria Santos",
+    "role": "Committee Chairperson",
+    "department": "Leadership",
+    "bio": "Dedicated to establishing clear collaboration structures and mentoring single adults in regional community frameworks.",
+    "image": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&h=300&q=80",
+    "linkedin": "https://linkedin.com",
+    "email": "maria@example.com"
+  },
+  {
+    "id": 2,
+    "name": "Elder Marcus Chen",
+    "role": "Service Project Coordinator",
+    "department": "Ministering",
+    "bio": "Focuses on mobilizing regional cleanup programs, community outreach logistics, and sustainable public initiatives.",
+    "image": "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&h=300&q=80",
+    "linkedin": "https://linkedin.com",
+    "email": "marcus@example.com"
+  },
+  {
+    "id": 3,
+    "name": "Sister Sarah Jenkins",
+    "role": "Fireside & Devotional Planner",
+    "department": "Spiritual",
+    "bio": "Organizing evening events, thematic analyses of historical backgrounds, and public musical collaboration projects.",
+    "image": "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&h=300&q=80",
+    "linkedin": "https://linkedin.com",
+    "email": "sarah@example.com"
+  }
+]
