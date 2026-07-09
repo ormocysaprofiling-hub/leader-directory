@@ -10,7 +10,7 @@
    Netlify Identity, Google Workspace SSO) for anything higher-stakes.
    Change ACCESS_CODE below to set your own passphrase.
    ============================================================ */
-const ACCESS_CODE = "ServeOrmoc26";
+const ACCESS_CODE = "GatheringInChrist";
 const SESSION_KEY = "gic_leader_session";
 
 let leadersData = [];
