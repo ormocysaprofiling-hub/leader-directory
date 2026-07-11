@@ -222,13 +222,26 @@ function handleSearchAndFilter() {
    YSA DIRECTORY — everyone who filled out the profiling form
    Filters: Ward, Gender, Age Range, Temporal Status
    ------------------------------------------------------------
+   LIVE DATA SOURCE: this fetches directly from the Apps Script
+   Web App URL below, which reads the "YSA Profiles" Google Sheet
+   that the profile builder form writes to on every submission.
+   Paste your deployed Apps Script /exec URL here (same one used
+   as APPS_SCRIPT_URL in profile-builder.html).
+
    To change the Temporal Status options, edit the list below.
    ============================================================ */
+
+const YSA_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbylBwoo-d2mf-ivdcaQVXkj2orJUra9xyxAsFGdyyWP2QDI5YubcB1Ccw6uNLeKJwFhAA/exec';
 
 const YSA_TEMPORAL_STATUS_OPTIONS = ["Student", "Employed", "Self-Employed", "Other"];
 
 function loadYsaDirectory() {
-    fetch('ysa.json')
+    if (!YSA_SHEET_API_URL || YSA_SHEET_API_URL.indexOf('PASTE_YOUR') === 0) {
+        document.getElementById('ysa-result-count').textContent =
+            'YSA_SHEET_API_URL is not set yet — add your Apps Script URL in app.js.';
+        return;
+    }
+    fetch(YSA_SHEET_API_URL)
         .then(response => response.json())
         .then(data => {
             ysaData = data;
@@ -238,7 +251,7 @@ function loadYsaDirectory() {
         })
         .catch(error => {
             console.error('YSA data loading failure:', error);
-            document.getElementById('ysa-result-count').textContent = 'Could not load ysa.json — make sure the file exists next to index.html.';
+            document.getElementById('ysa-result-count').textContent = 'Could not load live YSA data — check the Apps Script deployment and URL.';
         });
 }
 
@@ -294,7 +307,7 @@ function renderYsaDirectory(list) {
     noResults.classList.add('hidden');
 
     list.forEach(p => {
-        const genderSeal = p.gender === 'Female' ? 'bg-[#B7552F]' : 'bg-[#1F4B46]';
+        const genderSeal = (p.gender === 'Sister' || p.gender === 'Female') ? 'bg-[#B7552F]' : 'bg-[#1F4B46]';
 
         const card = document.createElement('div');
         card.className = 'leader-card rounded-xl overflow-hidden p-5';
