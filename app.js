@@ -231,7 +231,7 @@ function handleSearchAndFilter() {
    To change the Temporal Status options, edit the list below.
    ============================================================ */
 
-const YSA_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbylBwoo-d2mf-ivdcaQVXkj2orJUra9xyxAsFGdyyWP2QDI5YubcB1Ccw6uNLeKJwFhAA/exec';
+const YSA_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwCzz0dflaswMvSkCFMwaZ_bQsHWOrAe8mvQUexKRIDax7FzXj0A-xXMS6A9aqRXuc88w/exec';
 
 const YSA_TEMPORAL_STATUS_OPTIONS = ["Student", "Employed", "Self-Employed", "Other"];
 
@@ -335,6 +335,11 @@ function renderYsaDirectory(list) {
                     <div class="text-[color:var(--ink)] mt-0.5">${p.temporalStatus || '—'}</div>
                 </div>
             </div>
+            ${p.pdfUrl ? `
+            <a href="${p.pdfUrl}" target="_blank" rel="noopener" class="mt-3 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-[#1F4B46] hover:text-[color:var(--ink)] border-t border-[color:var(--line)] pt-3 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                View PDF Profile
+            </a>` : ''}
         `;
         grid.appendChild(card);
     });
