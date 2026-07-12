@@ -1,17 +1,31 @@
 /* ============================================================
    ACCESS CONTROL
    ------------------------------------------------------------
-   This is a CLIENT-SIDE gate only — it hides the page behind a
-   shared access code, which is good enough to keep casual/public
-   visitors out of an internal directory, but the code itself
-   ships inside this file and can be read by anyone who opens
-   dev tools. Do not rely on this alone if leader/YSA contact
-   info is sensitive — pair it with real auth (e.g. a backend,
-   Netlify Identity, Google Workspace SSO) for anything higher-stakes.
-   Change ACCESS_CODE below to set your own passphrase.
+   Individual username/password per leader. Passwords are stored
+   as SHA-256 hashes below (not plain text) — a step up from a
+   readable password, but since this is a static site with no
+   real backend, a determined person could still find ways around
+   this by reading the code. Don't treat this as bank-grade
+   security; it's meant to keep casual/public visitors out and
+   give each leader their own login, not to protect truly
+   sensitive data.
+
+   TO ADD OR CHANGE A LEADER'S LOGIN:
+   Send Claude the username + password you want and it will
+   generate the correct hash line for you to paste in below.
    ============================================================ */
-const ACCESS_CODE = "GatheringInChrist";
+const LEADER_CREDENTIALS = [
+  { username: 'keanutugonon87', name: 'KeanuTugonon', passwordHash: '171b09eeb5a9efff496bdc8eeeab71cf6648a1631b381ffe4416fe3a87f4b0f5' },
+  { username: 'jamjampales12', name: 'JamJamPales', passwordHash: '66afee34dd6fd2be95e9c0332fa014f21776b26cad9192f67710cf736e8f21df' },
+  { username: 'benzgwapo11', name: 'benzgwapo11', passwordHash: '9d8fa1933c05f10725fee8de4ce996214283c517a3d61cc059117ac224dedd3a' },
+];
 const SESSION_KEY = "gic_leader_session";
+
+async function sha256Hex(text) {
+    const enc = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 let leadersData = [];
 let activeDepartment = 'All';
@@ -39,8 +53,9 @@ function initAuth() {
     if (saved) {
         try {
             const session = JSON.parse(saved);
-            if (session && session.code === ACCESS_CODE) {
-                enterApp(session.name);
+            const match = LEADER_CREDENTIALS.find(c => c.username === session.username && c.passwordHash === session.passwordHash);
+            if (session && match) {
+                enterApp(match.name);
                 return;
             }
         } catch (e) { /* fall through to login */ }
@@ -48,16 +63,19 @@ function initAuth() {
     document.getElementById('login-name').focus();
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
-    const name = document.getElementById('login-name').value.trim();
+    const username = document.getElementById('login-name').value.trim().toLowerCase();
     const pass = document.getElementById('login-pass').value;
     const remember = document.getElementById('remember-me').checked;
     const errorBox = document.getElementById('login-error');
     const card = document.querySelector('.login-card');
 
-    if (pass !== ACCESS_CODE) {
-        errorBox.textContent = "That access code isn't recognized. Please check with the stake office and try again.";
+    const passwordHash = await sha256Hex(pass);
+    const match = LEADER_CREDENTIALS.find(c => c.username.toLowerCase() === username && c.passwordHash === passwordHash);
+
+    if (!match) {
+        errorBox.textContent = "That username or password isn't recognized. Please check with the stake office and try again.";
         errorBox.classList.remove('hidden');
         card.classList.add('shake');
         setTimeout(() => card.classList.remove('shake'), 400);
@@ -65,7 +83,7 @@ function handleLogin(e) {
     }
 
     errorBox.classList.add('hidden');
-    const session = JSON.stringify({ name, code: ACCESS_CODE, ts: Date.now() });
+    const session = JSON.stringify({ username: match.username, passwordHash, ts: Date.now() });
     if (remember) {
         localStorage.setItem(SESSION_KEY, session);
     } else {
@@ -73,7 +91,7 @@ function handleLogin(e) {
     }
 
     document.getElementById('login-screen').classList.add('unlocking');
-    setTimeout(() => enterApp(name), 280);
+    setTimeout(() => enterApp(match.name), 280);
 }
 
 function handleLogout() {
@@ -231,7 +249,7 @@ function handleSearchAndFilter() {
    To change the Temporal Status options, edit the list below.
    ============================================================ */
 
-const YSA_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwCzz0dflaswMvSkCFMwaZ_bQsHWOrAe8mvQUexKRIDax7FzXj0A-xXMS6A9aqRXuc88w/exec';
+const YSA_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbz6904pt0B1_sBjyXL_eJM8YQc5NBaA266lgDL9Ah6Go0rZmCEtXL5DaoixPzCWack2Bg/exec';
 
 const YSA_TEMPORAL_STATUS_OPTIONS = ["Student", "Employed", "Self-Employed", "Other"];
 
@@ -335,6 +353,16 @@ function renderYsaDirectory(list) {
                     <div class="text-[color:var(--ink)] mt-0.5">${p.temporalStatus || '—'}</div>
                 </div>
             </div>
+            ${p.contact ? `
+            <div class="mt-3 pt-3 border-t border-[color:var(--line)]">
+                <div class="text-[color:var(--ink-soft)] font-semibold uppercase tracking-wide text-[9px]">Contact</div>
+                <div class="text-[color:var(--ink)] text-[11px] mt-0.5 break-words">${p.contact}</div>
+            </div>` : ''}
+            ${p.bio ? `
+            <div class="mt-3 pt-3 border-t border-[color:var(--line)]">
+                <div class="text-[color:var(--ink-soft)] font-semibold uppercase tracking-wide text-[9px]">About Me</div>
+                <p class="text-[color:var(--ink)] text-[11px] mt-0.5 leading-relaxed line-clamp-3">${p.bio}</p>
+            </div>` : ''}
             ${p.pdfUrl ? `
             <a href="${p.pdfUrl}" target="_blank" rel="noopener" class="mt-3 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-[#1F4B46] hover:text-[color:var(--ink)] border-t border-[color:var(--line)] pt-3 transition-colors">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
