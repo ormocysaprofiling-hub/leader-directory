@@ -151,7 +151,7 @@ function enterApp(name, username) {
 
 // Set this to the live URL of your profile-builder.html page once
 // it's deployed, so the QR code / share link in the YSA tab works.
-const YSA_FORM_URL = 'PASTE_YOUR_PROFILE_BUILDER_URL_HERE';
+const YSA_FORM_URL = 'https://ormocysaprofiling-hub.github.io/ysa-profile-builder/';
 
 function initShareWidget() {
     const linkInput = document.getElementById('share-form-link');
