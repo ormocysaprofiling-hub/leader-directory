@@ -29,10 +29,15 @@ async function sha256Hex(text) {
 
 let leadersData = [];
 let activeDepartment = 'All';
+let currentUser = null; // { username, name }
 
 let ysaData = [];
 let ysaLoaded = false;
 let ysaFilters = { ward: 'All', gender: 'All', age: 'All', status: 'All' };
+
+// Auto-logout after this many minutes of no clicks/keystrokes/scrolling.
+const AUTO_LOGOUT_MINUTES = 20;
+let autoLogoutTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
@@ -44,7 +49,22 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ysa-gender-select').addEventListener('change', e => { ysaFilters.gender = e.target.value; handleYsaFilter(); });
     document.getElementById('ysa-age-select').addEventListener('change', e => { ysaFilters.age = e.target.value; handleYsaFilter(); });
     document.getElementById('ysa-status-select').addEventListener('change', e => { ysaFilters.status = e.target.value; handleYsaFilter(); });
+
+    ['click', 'keydown', 'scroll', 'mousemove'].forEach(evt => {
+        document.addEventListener(evt, resetAutoLogoutTimer, { passive: true });
+    });
 });
+
+function resetAutoLogoutTimer() {
+    if (!currentUser) return;
+    clearTimeout(autoLogoutTimer);
+    autoLogoutTimer = setTimeout(() => {
+        handleLogout();
+        const errorBox = document.getElementById('login-error');
+        errorBox.textContent = "You were signed out after " + AUTO_LOGOUT_MINUTES + " minutes of inactivity.";
+        errorBox.classList.remove('hidden');
+    }, AUTO_LOGOUT_MINUTES * 60 * 1000);
+}
 
 /* ---------------- AUTH ---------------- */
 
@@ -55,7 +75,7 @@ function initAuth() {
             const session = JSON.parse(saved);
             const match = LEADER_CREDENTIALS.find(c => c.username === session.username && c.passwordHash === session.passwordHash);
             if (session && match) {
-                enterApp(match.name);
+                enterApp(match.name, match.username);
                 return;
             }
         } catch (e) { /* fall through to login */ }
@@ -90,13 +110,26 @@ async function handleLogin(e) {
         sessionStorage.setItem(SESSION_KEY, session);
     }
 
+    logLogin(match.username, match.name);
     document.getElementById('login-screen').classList.add('unlocking');
-    setTimeout(() => enterApp(match.name), 280);
+    setTimeout(() => enterApp(match.name, match.username), 280);
+}
+
+// Fire-and-forget — doesn't block login if it fails or is slow.
+function logLogin(username, displayName) {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) return;
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ type: 'loginLog', username, displayName })
+    }).catch(() => {}); // audit logging failing silently is fine — never block login on it
 }
 
 function handleLogout() {
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_KEY);
+    currentUser = null;
+    clearTimeout(autoLogoutTimer);
     document.getElementById('app-shell').style.display = 'none';
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-screen').classList.remove('unlocking');
@@ -104,15 +137,43 @@ function handleLogout() {
     document.getElementById('login-name').focus();
 }
 
-function enterApp(name) {
+function enterApp(name, username) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-shell').style.display = 'flex';
     const first = (name || '').split(' ')[0];
     document.getElementById('welcome-line').textContent = first ? `Signed in as ${first}` : 'Signed in';
+    currentUser = { username: username || '', name: name || '' };
+    resetAutoLogoutTimer();
     if (leadersData.length === 0) loadLeadersDirectory();
 }
 
 /* ---------------- TOP-LEVEL DIRECTORY TABS ---------------- */
+
+// Set this to the live URL of your profile-builder.html page once
+// it's deployed, so the QR code / share link in the YSA tab works.
+const YSA_FORM_URL = 'PASTE_YOUR_PROFILE_BUILDER_URL_HERE';
+
+function initShareWidget() {
+    const linkInput = document.getElementById('share-form-link');
+    const qrImg = document.getElementById('share-qr-img');
+    if (!YSA_FORM_URL || YSA_FORM_URL.indexOf('PASTE_YOUR') === 0) {
+        linkInput.value = 'Set YSA_FORM_URL in app.js to enable this';
+        return;
+    }
+    linkInput.value = YSA_FORM_URL;
+    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(YSA_FORM_URL);
+}
+
+function copyShareLink() {
+    const linkInput = document.getElementById('share-form-link');
+    if (!YSA_FORM_URL || YSA_FORM_URL.indexOf('PASTE_YOUR') === 0) return;
+    navigator.clipboard.writeText(linkInput.value).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+}
 
 function selectDirectory(directory) {
     document.querySelectorAll('#directory-tabs .committee-tab').forEach(tab => {
@@ -122,6 +183,7 @@ function selectDirectory(directory) {
     document.getElementById('ysa-panel').classList.toggle('hidden', directory !== 'ysa');
 
     if (directory === 'ysa' && !ysaLoaded) loadYsaDirectory();
+    if (directory === 'ysa') initShareWidget();
 }
 
 /* ============================================================
@@ -130,13 +192,24 @@ function selectDirectory(directory) {
    ============================================================ */
 
 function loadLeadersDirectory() {
-    fetch('leaders.json')
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+        // Fallback to the static file if the backend isn't configured yet.
+        fetch('leaders.json')
+            .then(response => response.json())
+            .then(data => { leadersData = data; handleSearchAndFilter(); })
+            .catch(error => console.error('Leaders data loading failure:', error));
+        return;
+    }
+    fetch(APPS_SCRIPT_URL + '?type=leaders')
         .then(response => response.json())
         .then(data => {
             leadersData = data;
             handleSearchAndFilter();
         })
-        .catch(error => console.error('Leaders data loading failure:', error));
+        .catch(error => {
+            console.error('Leaders data loading failure:', error);
+            document.getElementById('result-count').textContent = 'Could not load live leader data — check the Apps Script deployment.';
+        });
 }
 
 const DEPT_STYLE = {
@@ -165,10 +238,32 @@ function renderDirectory(leaders) {
     noResults.classList.add('hidden');
 
     leaders.forEach(leader => {
+        const card = document.createElement('div');
+
+        if (leader.isVacant) {
+            card.className = 'leader-card rounded-xl overflow-hidden flex flex-col justify-between border-dashed';
+            card.innerHTML = `
+                <div class="p-5 flex flex-col items-center text-center py-8">
+                    <div class="w-14 h-14 rounded-full border-2 border-dashed border-[color:var(--line)] flex items-center justify-center text-[color:var(--ink-soft)] mb-3">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/></svg>
+                    </div>
+                    <h3 class="font-serif-theme text-base font-semibold text-[color:var(--ink-soft)]">${leader.role || 'Vacant Assignment'}</h3>
+                    <p class="text-xs text-[color:var(--ink-soft)] mt-1">${leader.ward ? leader.ward + ' · ' : ''}Position currently open</p>
+                </div>
+                ${currentUser ? `
+                <div class="bg-[color:var(--line)]/40 px-5 py-2.5 border-t border-[color:var(--line)] flex items-center justify-center gap-4 text-xs font-semibold">
+                    <button onclick="openLeaderEditor('${leader.id}')" class="text-[#1F4B46] hover:text-[color:var(--ink)] cursor-pointer">Fill Position</button>
+                    <button onclick="deleteLeader('${leader.id}')" class="text-[color:var(--ink-soft)] hover:text-[#B7552F] cursor-pointer">Remove</button>
+                </div>` : ''}
+            `;
+            grid.appendChild(card);
+            return;
+        }
+
         const style = DEPT_STYLE[leader.department] || { seal: 'bg-[#59543F]', badge: 'bg-[#59543F]/15 text-[#59543F]' };
         const unit = leader.ward || 'Unit not set';
+        const tenureLabel = leader.servingSince ? formatUpdatedDate(leader.servingSince) : '';
 
-        const card = document.createElement('div');
         card.className = 'leader-card rounded-xl overflow-hidden flex flex-col justify-between';
         card.innerHTML = `
             <div class="p-5">
@@ -177,7 +272,7 @@ function renderDirectory(leaders) {
                         <img class="avatar-ring h-14 w-14 rounded-full object-cover" src="${leader.image}" alt="${leader.name}"
                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div style="display:none" class="avatar-ring h-14 w-14 rounded-full items-center justify-center font-serif-theme text-sm font-semibold text-white ${style.seal}">${initials(leader.name)}</div>
-                        <div class="dept-seal ${style.seal} absolute -bottom-1 -right-1">${leader.department[0]}</div>
+                        <div class="dept-seal ${style.seal} absolute -bottom-1 -right-1">${(leader.department || '?')[0]}</div>
                     </div>
                     <div class="min-w-0">
                         <h3 class="font-serif-theme text-base font-semibold leading-tight truncate">${leader.name}</h3>
@@ -197,19 +292,109 @@ function renderDirectory(leaders) {
                         <div class="text-[color:var(--ink)] mt-0.5">${leader.role}</div>
                     </div>
                 </div>
+                ${tenureLabel ? `<div class="mt-2 text-[10px] text-[color:var(--ink-soft)]">Serving since ${tenureLabel}</div>` : ''}
             </div>
             <div class="bg-[color:var(--line)]/40 px-5 py-2.5 border-t border-[color:var(--line)] flex items-center justify-between text-xs font-semibold">
                 <a href="${leader.linkedin}" target="_blank" rel="noopener" class="text-[#1F4B46] hover:text-[color:var(--ink)] transition-colors flex items-center gap-1">
                     LinkedIn
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17 17 7M8 7h9v9"/></svg>
                 </a>
-                <a href="mailto:${leader.email}" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
-                    Contact
-                </a>
+                <div class="flex items-center gap-3">
+                    <a href="mailto:${leader.email}" class="text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] transition-colors">
+                        Contact
+                    </a>
+                    ${currentUser ? `
+                    <button onclick="openLeaderEditor('${leader.id}')" class="text-[color:var(--ink-soft)] hover:text-[#1F4B46] cursor-pointer">Edit</button>
+                    <button onclick="deleteLeader('${leader.id}')" class="text-[color:var(--ink-soft)] hover:text-[#B7552F] cursor-pointer">Delete</button>` : ''}
+                </div>
             </div>
         `;
         grid.appendChild(card);
     });
+}
+
+/* ---------------- LEADER EDITOR (add / edit / delete) ---------------- */
+
+function openLeaderEditor(id) {
+    const modal = document.getElementById('leader-modal');
+    const title = document.getElementById('leader-modal-title');
+    const leader = id ? leadersData.find(l => String(l.id) === String(id)) : null;
+
+    document.getElementById('lf-id').value = leader ? leader.id : '';
+    document.getElementById('lf-name').value = leader && !leader.isVacant ? leader.name : '';
+    document.getElementById('lf-role').value = leader ? leader.role : '';
+    document.getElementById('lf-department').value = leader ? leader.department : 'Leadership';
+    document.getElementById('lf-ward').value = leader ? leader.ward : '';
+    document.getElementById('lf-servingSince').value = leader && leader.servingSince ? leader.servingSince.slice(0, 10) : '';
+    document.getElementById('lf-bio').value = leader ? leader.bio : '';
+    document.getElementById('lf-image').value = leader ? leader.image : '';
+    document.getElementById('lf-linkedin').value = leader ? leader.linkedin : '';
+    document.getElementById('lf-email').value = leader ? leader.email : '';
+    document.getElementById('lf-isVacant').checked = leader ? !!leader.isVacant : false;
+
+    title.textContent = leader ? (leader.isVacant ? 'Fill Vacant Position' : 'Edit Leader') : 'Add Leader';
+    modal.classList.remove('hidden');
+}
+
+function closeLeaderEditor() {
+    document.getElementById('leader-modal').classList.add('hidden');
+}
+
+function saveLeader() {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+        alert('APPS_SCRIPT_URL is not set in app.js yet, so leader changes cannot be saved.');
+        return;
+    }
+    const id = document.getElementById('lf-id').value;
+    const leader = {
+        id: id || undefined,
+        name: document.getElementById('lf-name').value.trim(),
+        role: document.getElementById('lf-role').value.trim(),
+        department: document.getElementById('lf-department').value,
+        ward: document.getElementById('lf-ward').value.trim(),
+        servingSince: document.getElementById('lf-servingSince').value,
+        bio: document.getElementById('lf-bio').value.trim(),
+        image: document.getElementById('lf-image').value.trim(),
+        linkedin: document.getElementById('lf-linkedin').value.trim(),
+        email: document.getElementById('lf-email').value.trim(),
+        isVacant: document.getElementById('lf-isVacant').checked
+    };
+
+    const submitBtn = document.querySelector('#leader-form button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ type: 'leader', action: id ? 'edit' : 'add', leader })
+    })
+        .then(r => r.json())
+        .then(result => {
+            if (result.status !== 'success') throw new Error(result.message || 'Save failed');
+            closeLeaderEditor();
+            loadLeadersDirectory();
+        })
+        .catch(err => alert('Could not save: ' + err.message))
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save';
+        });
+}
+
+function deleteLeader(id) {
+    if (!confirm('Remove this entry from the Leaders Directory?')) return;
+    fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ type: 'leader', action: 'delete', leader: { id } })
+    })
+        .then(r => r.json())
+        .then(result => {
+            if (result.status !== 'success') throw new Error(result.message || 'Delete failed');
+            loadLeadersDirectory();
+        })
+        .catch(err => alert('Could not delete: ' + err.message));
 }
 
 function filterDepartment(dept) {
@@ -236,6 +421,62 @@ function handleSearchAndFilter() {
     renderDirectory(filtered);
 }
 
+/* ---------------- CSV EXPORT (leaders) ---------------- */
+
+function exportLeadersCsv() {
+    const rows = [['Name', 'Role', 'Department', 'Ward', 'Email', 'Serving Since']];
+    leadersData.filter(l => !l.isVacant).forEach(l => {
+        rows.push([l.name, l.role, l.department, l.ward, l.email, l.servingSince]);
+    });
+    downloadCsv(rows, 'leaders-directory.csv');
+}
+
+function downloadCsv(rows, filename) {
+    const csv = rows.map(row =>
+        row.map(cell => '"' + String(cell ?? '').replace(/"/g, '""') + '"').join(',')
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* ---------------- LOGIN ACTIVITY LOG ---------------- */
+
+let loginLogLoaded = false;
+
+function toggleLoginLog() {
+    const panel = document.getElementById('login-log-panel');
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden') && !loginLogLoaded) loadLoginLog();
+}
+
+function loadLoginLog() {
+    const list = document.getElementById('login-log-list');
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+        list.textContent = 'Backend not configured.';
+        return;
+    }
+    fetch(APPS_SCRIPT_URL + '?type=loginLog')
+        .then(r => r.json())
+        .then(data => {
+            loginLogLoaded = true;
+            if (data.length === 0) {
+                list.textContent = 'No login activity recorded yet.';
+                return;
+            }
+            list.innerHTML = data.map(entry => {
+                const d = new Date(entry.timestamp);
+                const when = isNaN(d) ? entry.timestamp : d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+                return `<div class="flex justify-between border-b border-[color:var(--line)] py-1"><span>${entry.displayName || entry.username}</span><span class="text-[color:var(--ink-soft)]">${when}</span></div>`;
+            }).join('');
+        })
+        .catch(() => { list.textContent = 'Could not load login activity.'; });
+}
+
 /* ============================================================
    YSA DIRECTORY — everyone who filled out the profiling form
    Filters: Ward, Gender, Age Range, Temporal Status
@@ -249,23 +490,25 @@ function handleSearchAndFilter() {
    To change the Temporal Status options, edit the list below.
    ============================================================ */
 
-const YSA_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbz6904pt0B1_sBjyXL_eJM8YQc5NBaA266lgDL9Ah6Go0rZmCEtXL5DaoixPzCWack2Bg/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVw8ky9mdVrOARXkAzdNqG-2dgzvxM6KiDlKKBRvW0qsmpkGs6xJ37yamikGqiOgA_kA/exec';
 
 const YSA_TEMPORAL_STATUS_OPTIONS = ["Student", "Employed", "Self-Employed", "Other"];
 
 function loadYsaDirectory() {
-    if (!YSA_SHEET_API_URL || YSA_SHEET_API_URL.indexOf('PASTE_YOUR') === 0) {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
         document.getElementById('ysa-result-count').textContent =
-            'YSA_SHEET_API_URL is not set yet — add your Apps Script URL in app.js.';
+            'APPS_SCRIPT_URL is not set yet — add your Apps Script URL in app.js.';
         return;
     }
-    fetch(YSA_SHEET_API_URL)
+    fetch(APPS_SCRIPT_URL)
         .then(response => response.json())
         .then(data => {
             ysaData = data;
             ysaLoaded = true;
             populateYsaFilterOptions(ysaData);
             handleYsaFilter();
+            renderYsaStats(ysaData);
+            renderUpcomingBirthdays(ysaData);
         })
         .catch(error => {
             console.error('YSA data loading failure:', error);
@@ -326,14 +569,23 @@ function renderYsaDirectory(list) {
 
     list.forEach(p => {
         const genderSeal = (p.gender === 'Sister' || p.gender === 'Female') ? 'bg-[#B7552F]' : 'bg-[#1F4B46]';
+        const updatedLabel = formatUpdatedDate(p.updatedAt);
+        const isNew = p.updatedAt && (Date.now() - new Date(p.updatedAt).getTime()) < 30 * 24 * 60 * 60 * 1000;
 
         const card = document.createElement('div');
-        card.className = 'leader-card rounded-xl overflow-hidden p-5';
+        card.className = 'leader-card rounded-xl overflow-hidden p-5 relative';
         card.innerHTML = `
+            ${isNew ? `<span class="absolute top-3 right-3 text-[8px] font-bold uppercase tracking-wide bg-[#AD8329] text-white px-1.5 py-0.5 rounded-sm">New</span>` : ''}
             <div class="flex items-center space-x-4 mb-3">
+                ${p.photoUrl ? `
+                <img class="avatar-ring h-12 w-12 rounded-full object-cover flex-shrink-0" src="${p.photoUrl}" alt="${p.name || 'Photo'}"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display:none" class="avatar-ring h-12 w-12 rounded-full items-center justify-center font-serif-theme text-sm font-semibold text-white ${genderSeal} flex-shrink-0">
+                    ${initials(p.name || '?')}
+                </div>` : `
                 <div class="avatar-ring h-12 w-12 rounded-full flex items-center justify-center font-serif-theme text-sm font-semibold text-white ${genderSeal} flex-shrink-0">
                     ${initials(p.name || '?')}
-                </div>
+                </div>`}
                 <div class="min-w-0">
                     <h3 class="font-serif-theme text-base font-semibold leading-tight truncate">${p.name || 'Unnamed'}</h3>
                     <p class="text-xs font-medium text-[color:var(--ink-soft)] mt-0.5">${p.ward || 'Unit not set'}</p>
@@ -368,7 +620,91 @@ function renderYsaDirectory(list) {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                 View PDF Profile
             </a>` : ''}
+            ${updatedLabel ? `<div class="mt-2 text-center text-[9px] text-[color:var(--ink-soft)]">Updated ${updatedLabel}</div>` : ''}
         `;
         grid.appendChild(card);
     });
+}
+
+function formatUpdatedDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/* ---------------- YSA STATS DASHBOARD ---------------- */
+
+function toggleYsaStats() {
+    document.getElementById('ysa-stats-panel').classList.toggle('hidden');
+}
+
+function renderYsaStats(list) {
+    const body = document.getElementById('ysa-stats-body');
+    if (!list.length) { body.innerHTML = '<p class="text-[color:var(--ink-soft)]">No profiles yet.</p>'; return; }
+
+    const byWard = {}, byGender = {}, byStatus = {};
+    list.forEach(p => {
+        byWard[p.ward || 'Unassigned'] = (byWard[p.ward || 'Unassigned'] || 0) + 1;
+        byGender[p.gender || 'Unspecified'] = (byGender[p.gender || 'Unspecified'] || 0) + 1;
+        byStatus[p.temporalStatus || 'Unspecified'] = (byStatus[p.temporalStatus || 'Unspecified'] || 0) + 1;
+    });
+
+    function barGroup(title, counts) {
+        const max = Math.max(...Object.values(counts));
+        const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([label, count]) => `
+            <div class="flex items-center gap-2">
+                <div class="w-24 truncate text-[color:var(--ink-soft)]">${label}</div>
+                <div class="flex-1 bg-[color:var(--line)] rounded h-3 overflow-hidden">
+                    <div class="bg-[#1F4B46] h-full" style="width:${(count / max * 100)}%"></div>
+                </div>
+                <div class="w-6 text-right font-semibold">${count}</div>
+            </div>
+        `).join('');
+        return `<div><div class="font-semibold uppercase text-[9px] tracking-wide text-[color:var(--ink-soft)] mb-1.5">${title}</div><div class="space-y-1">${rows}</div></div>`;
+    }
+
+    body.innerHTML =
+        `<div class="text-2xl font-serif-theme font-semibold">${list.length} <span class="text-xs font-sans-theme font-medium text-[color:var(--ink-soft)]">total profiles</span></div>` +
+        barGroup('By Ward', byWard) +
+        barGroup('By Gender', byGender) +
+        barGroup('By Status', byStatus);
+}
+
+/* ---------------- UPCOMING BIRTHDAYS ---------------- */
+
+function renderUpcomingBirthdays(list) {
+    const body = document.getElementById('ysa-birthdays-body');
+    const today = new Date();
+    const upcoming = list
+        .filter(p => p.birthdate)
+        .map(p => {
+            const bd = new Date(p.birthdate + 'T00:00');
+            if (isNaN(bd)) return null;
+            let next = new Date(today.getFullYear(), bd.getMonth(), bd.getDate());
+            if (next < today) next = new Date(today.getFullYear() + 1, bd.getMonth(), bd.getDate());
+            const daysAway = Math.round((next - today) / (1000 * 60 * 60 * 24));
+            return { name: p.name, daysAway, dateLabel: bd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+        })
+        .filter(x => x && x.daysAway <= 30)
+        .sort((a, b) => a.daysAway - b.daysAway);
+
+    if (!upcoming.length) { body.innerHTML = '<p class="text-[color:var(--ink-soft)]">None in the next 30 days.</p>'; return; }
+
+    body.innerHTML = upcoming.map(u => `
+        <div class="flex justify-between border-b border-[color:var(--line)] py-1">
+            <span>${u.name}</span>
+            <span class="text-[color:var(--ink-soft)]">${u.dateLabel}${u.daysAway === 0 ? ' · Today!' : ''}</span>
+        </div>
+    `).join('');
+}
+
+/* ---------------- CSV EXPORT (YSA) ---------------- */
+
+function exportYsaCsv() {
+    const rows = [['Name', 'Ward', 'Gender', 'Age', 'Status', 'Contact', 'Email']];
+    ysaData.forEach(p => {
+        rows.push([p.name, p.ward, p.gender, p.age, p.temporalStatus, p.contact, p.email]);
+    });
+    downloadCsv(rows, 'ysa-directory.csv');
 }
