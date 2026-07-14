@@ -157,7 +157,7 @@ function initShareWidget() {
     const linkInput = document.getElementById('share-form-link');
     const qrImg = document.getElementById('share-qr-img');
     if (!YSA_FORM_URL || YSA_FORM_URL.indexOf('PASTE_YOUR') === 0) {
-        linkInput.value = 'Set YSA_FORM_URL in app.js to enable this';
+        linkInput.value = 'https://ormocysaprofiling-hub.github.io/ysa-profile-builder/';
         return;
     }
     linkInput.value = YSA_FORM_URL;
