@@ -493,7 +493,7 @@ function loadLoginLog() {
    To change the Temporal Status options, edit the list below.
    ============================================================ */
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVw8ky9mdVrOARXkAzdNqG-2dgzvxM6KiDlKKBRvW0qsmpkGs6xJ37yamikGqiOgA_kA/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8tt3E31EmzOUR7NU0X16uGhZPyZP1YXn8EZpoBomV_fJfRmX1ZWcJSj67VAXnb98u4Q/exec';
 
 const YSA_TEMPORAL_STATUS_OPTIONS = ["Student", "Employed", "Self-Employed", "Other"];
 
