@@ -151,7 +151,7 @@ function enterApp(name, username) {
 
 // Set this to the live URL of your profile-builder.html page once
 // it's deployed, so the QR code / share link in the YSA tab works.
-const YSA_FORM_URL = 'https://ormocysaprofiling-hub.github.io/ysa-profile-builder/';
+const YSA_FORM_URL = 'PASTE_YOUR_PROFILE_BUILDER_URL_HERE';
 
 function initShareWidget() {
     const linkInput = document.getElementById('share-form-link');
@@ -194,13 +194,16 @@ function selectDirectory(directory) {
 function loadLeadersDirectory() {
     if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
         // Fallback to the static file if the backend isn't configured yet.
-        fetch('leaders.json')
+        fetch('leaders.json?_=' + Date.now(), { cache: 'no-store' })
             .then(response => response.json())
             .then(data => { leadersData = data; handleSearchAndFilter(); })
             .catch(error => console.error('Leaders data loading failure:', error));
         return;
     }
-    fetch(APPS_SCRIPT_URL + '?type=leaders')
+    // cache: 'no-store' + a timestamp param stop the browser from silently
+    // reusing a stale cached response for this GET request (this was why a
+    // freshly-added leader wouldn't show up until a hard refresh).
+    fetch(APPS_SCRIPT_URL + '?type=leaders&_=' + Date.now(), { cache: 'no-store' })
         .then(response => response.json())
         .then(data => {
             leadersData = data;
@@ -460,7 +463,7 @@ function loadLoginLog() {
         list.textContent = 'Backend not configured.';
         return;
     }
-    fetch(APPS_SCRIPT_URL + '?type=loginLog')
+    fetch(APPS_SCRIPT_URL + '?type=loginLog&_=' + Date.now(), { cache: 'no-store' })
         .then(r => r.json())
         .then(data => {
             loginLogLoaded = true;
@@ -500,7 +503,7 @@ function loadYsaDirectory() {
             'APPS_SCRIPT_URL is not set yet — add your Apps Script URL in app.js.';
         return;
     }
-    fetch(APPS_SCRIPT_URL)
+    fetch(APPS_SCRIPT_URL + '?_=' + Date.now(), { cache: 'no-store' })
         .then(response => response.json())
         .then(data => {
             ysaData = data;
