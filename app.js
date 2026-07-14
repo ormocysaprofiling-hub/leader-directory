@@ -151,17 +151,19 @@ function enterApp(name, username) {
 
 // Set this to the live URL of your profile-builder.html page once
 // it's deployed, so the QR code / share link in the YSA tab works.
-const YSA_FORM_URL = 'PASTE_YOUR_PROFILE_BUILDER_URL_HERE';
+const YSA_FORM_URL = 'https://ormocysaprofiling-hub.github.io/ysa-profile-builder/';
 
 function initShareWidget() {
     const linkInput = document.getElementById('share-form-link');
     const qrImg = document.getElementById('share-qr-img');
+    const qrLink = document.getElementById('share-qr-wrap');
     if (!YSA_FORM_URL || YSA_FORM_URL.indexOf('PASTE_YOUR') === 0) {
-        linkInput.value = 'https://ormocysaprofiling-hub.github.io/ysa-profile-builder/';
+        linkInput.value = 'Set YSA_FORM_URL in app.js to enable this';
         return;
     }
     linkInput.value = YSA_FORM_URL;
     qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(YSA_FORM_URL);
+    qrLink.href = YSA_FORM_URL; // makes the QR code itself clickable, opens the form directly
 }
 
 function copyShareLink() {
@@ -173,6 +175,29 @@ function copyShareLink() {
         btn.textContent = 'Copied!';
         setTimeout(() => { btn.textContent = original; }, 1500);
     });
+}
+
+// Opens a print dialog for a standalone flyer: big QR code + #GatheringInChrist
+// caption, sized to print cleanly on a sheet of paper (post on a bulletin board,
+// hand out at activities, etc).
+function printQrFlyer() {
+    if (!YSA_FORM_URL || YSA_FORM_URL.indexOf('PASTE_YOUR') === 0) return;
+    const flyerImg = document.getElementById('qr-flyer-img');
+    flyerImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(YSA_FORM_URL);
+
+    const flyerHtml = document.getElementById('qr-flyer-print').innerHTML;
+    const printWin = window.open('', '_blank', 'width=500,height=650');
+    printWin.document.write(`
+        <html>
+        <head><title>Gathering in Christ — YSA Profile QR</title></head>
+        <body style="margin:0;">${flyerHtml}</body>
+        </html>
+    `);
+    printWin.document.close();
+    printWin.onload = () => {
+        printWin.focus();
+        printWin.print();
+    };
 }
 
 function selectDirectory(directory) {
